@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+	"log"
 )
 
 // Constants for return types of golang
@@ -108,6 +109,9 @@ func Generate(columnTypes map[string]map[string]string, tableName string, struct
 // 	fmtFieldName("foo_id")
 // Output: FooID
 func fmtFieldName(s string) string {
+	log.Print(s)
+	s = strings.ToLower(s)
+	log.Print(s)
 	name := lintFieldName(s)
 	runes := []rune(name)
 	for i, c := range runes {

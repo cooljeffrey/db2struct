@@ -86,7 +86,7 @@ func generateMysqlTypes(obj map[string]map[string]string, depth int, jsonAnnotat
 		fieldName := fmtFieldName(stringifyFirstChar(key))
 		var annotations []string
 		if gormAnnotation == true {
-			annotations = append(annotations, fmt.Sprintf("gorm:\"column:%s\"", key))
+			annotations = append(annotations, fmt.Sprintf("db:\"%s\"", key))
 		}
 		if jsonAnnotation == true {
 			annotations = append(annotations, fmt.Sprintf("json:\"%s\"", key))
