@@ -1,4 +1,4 @@
-# db2struct [![Build Status](https://travis-ci.org/Shelnutt2/db2struct.svg?branch=master)](https://travis-ci.org/Shelnutt2/db2struct) [![Coverage Status](https://coveralls.io/repos/github/Shelnutt2/db2struct/badge.svg?branch=1-add-coveralls-support)](https://coveralls.io/github/Shelnutt2/db2struct?branch=1-add-coveralls-support) [![GoDoc](https://godoc.org/github.com/Shelnutt2/db2struct?status.svg)](https://godoc.org/github.com/Shelnutt2/db2struct)
+# db2struct [![Build Status](https://travis-ci.org/cooljeffrey/db2struct.svg?branch=master)](https://travis-ci.org/cooljeffrey/db2struct) [![Coverage Status](https://coveralls.io/repos/github/cooljeffrey/db2struct/badge.svg?branch=1-add-coveralls-support)](https://coveralls.io/github/cooljeffrey/db2struct?branch=1-add-coveralls-support) [![GoDoc](https://godoc.org/github.com/cooljeffrey/db2struct?status.svg)](https://godoc.org/github.com/cooljeffrey/db2struct)
 
 The db2struct package produces a usable golang struct from a given database table for use in a .go file.
 
@@ -16,7 +16,7 @@ Db2Struct is based/inspired by the work of ChimeraCoder's gojson package
 ## Usage
 
 ```BASH
-go get github.com/Shelnutt2/db2struct/db2struct
+go get github.com/cooljeffrey/db2struct/cmd/db2struct
 db2struct --host localhost -d test -t test_table --package myGoPackage --struct testTable -p --user testUser
 ```
 
@@ -45,13 +45,13 @@ type User struct {
 ## Supported Databases
 
 Currently Supported
-- MariaDB
-- MySQL
+-   MariaDB
+-   MySQL
 
 Planned Support
-- PostgreSQL
-- Oracle
-- Microsoft SQL Server
+-   PostgreSQL
+-   Oracle
+-   Microsoft SQL Server
 
 ### MariaDB/MySQL
 
@@ -61,27 +61,28 @@ and metadata to create a usable go compatible struct type.
 #### Supported Datatypes
 
 Currently only a limited number of MariaDB/MySQL datatypes are supported. Initial support includes:
--  tinyint (sql.NullInt64 or null.Int)
--  int      (sql.NullInt64 or null.Int)
--  smallint      (sql.NullInt64 or null.Int)
--  mediumint      (sql.NullInt64 or null.Int)
--  bigint (sql.NullInt64 or null.Int)
--  decimal (sql.NullFloat64 or null.Float)
--  float (sql.NullFloat64 or null.Float)
--  double (sql.NullFloat64 or null.Float)
--  datetime (null.Time)
--  time  (null.Time)
--  date (null.Time)
--  timestamp (null.Time)
--  var (sql.String or null.String)
--  enum (sql.String or null.String)
--  varchar (sql.String or null.String)
--  longtext (sql.String or null.String)
--  mediumtext (sql.String or null.String)
--  text (sql.String or null.String)
--  tinytext (sql.String or null.String)
--  binary
--  blob
--  longblob
--  mediumblob
--  varbinary
+-   tinyint (sql.NullInt64 or null.Int)
+-   int      (sql.NullInt64 or null.Int)
+-   smallint      (sql.NullInt64 or null.Int)
+-   mediumint      (sql.NullInt64 or null.Int)
+-   bigint (sql.NullInt64 or null.Int)
+-   decimal (sql.NullFloat64 or null.Float)
+-   float (sql.NullFloat64 or null.Float)
+-   double (sql.NullFloat64 or null.Float)
+-   datetime (null.Time)
+-   time  (null.Time)
+-   date (null.Time)
+-   timestamp (null.Time)
+-   var (sql.String or null.String)
+-   enum (sql.String or null.String)
+-   varchar (sql.String or null.String)
+-   longtext (sql.String or null.String)
+-   mediumtext (sql.String or null.String)
+-   text (sql.String or null.String)
+-   tinytext (sql.String or null.String)
+-   binary
+-   blob
+-   longblob
+-   mediumblob
+-   varbinary
+-   json

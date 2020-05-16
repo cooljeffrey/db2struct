@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/cooljeffrey/db2struct"
 	"os"
 	"strconv"
+	"strings"
 
-	"db2struct"
 	goopt "github.com/droundy/goopt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/howeyc/gopass"
@@ -25,6 +26,9 @@ var structName = goopt.String([]string{"--struct"}, "", "name to set for struct"
 var jsonAnnotation = goopt.Flag([]string{"--json"}, []string{"--no-json"}, "Add json annotations (default)", "Disable json annotations")
 var gormAnnotation = goopt.Flag([]string{"--gorm"}, []string{}, "Add gorm annotations (tags)", "")
 var gureguTypes = goopt.Flag([]string{"--guregu"}, []string{}, "Add guregu null types", "")
+var sqlxAnnotation = goopt.Flag([]string{"--sqlx"}, []string{}, "Add sqlx db annotations", "")
+
+var targetFile = goopt.String([]string{"--target"}, "", "Save file path")
 
 func init() {
 	goopt.OptArg([]string{"-p", "--password"}, "", "Mysql password", getMariadbPassword)
@@ -64,6 +68,9 @@ func main() {
 			fmt.Println("Error reading password: " + err.Error())
 			return
 		}
+	} else if mariadbPassword == nil {
+		p := ""
+		mariadbPassword = &p
 	}
 
 	if *verbose {
@@ -75,18 +82,6 @@ func main() {
 		return
 	}
 
-	if mariadbTable == nil || *mariadbTable == "" {
-		fmt.Println("Table can not be null")
-		return
-	}
-
-	columnDataTypes, err := db2struct.GetColumnsFromMysqlTable(*mariadbUser, *mariadbPassword, mariadbHost, *mariadbPort, *mariadbDatabase, *mariadbTable)
-
-	if err != nil {
-		fmt.Println("Error in selecting column data information from mysql information schema")
-		return
-	}
-
 	// If structName is not set we need to default it
 	if structName == nil || *structName == "" {
 		*structName = "newstruct"
@@ -95,20 +90,53 @@ func main() {
 	if packageName == nil || *packageName == "" {
 		*packageName = "newpackage"
 	}
-	// Generate struct string based on columnDataTypes
-	struc, err := db2struct.Generate(*columnDataTypes, *mariadbTable, *structName, *packageName, *jsonAnnotation, *gormAnnotation, *gureguTypes)
 
-	if err != nil {
-		fmt.Println("Error in creating struct from json: " + err.Error())
-		return
+	if mariadbTable == nil || *mariadbTable == "" {
+		fmt.Println("Generating structs for all tables")
+		tables, err := db2struct.ListTablesOfDatabase(*mariadbUser, *mariadbPassword, mariadbHost, *mariadbPort, *mariadbDatabase)
+		if err != nil {
+			fmt.Println("Error to list tables")
+			return
+		} else {
+			for _, t := range tables {
+				generateSingleTable("./model", t)
+			}
+		}
+	} else {
+		generateSingleTable("./model", *mariadbTable)
 	}
-
-	fmt.Println(string(struc))
-
 }
 
 func getMariadbPassword(password string) error {
 	mariadbPassword = new(string)
 	*mariadbPassword = password
+	return nil
+}
+
+func generateSingleTable(path string, table string) error {
+	columnDataTypes, err := db2struct.GetColumnsFromMysqlTable(*mariadbUser, *mariadbPassword, mariadbHost, *mariadbPort, *mariadbDatabase, table)
+	if err != nil {
+		fmt.Println("Error in selecting column data information from mysql information schema")
+		return err
+	} else {
+		struc, err2 := db2struct.Generate(*columnDataTypes, table, *structName, *packageName, *jsonAnnotation, *gormAnnotation, *gureguTypes, *sqlxAnnotation)
+		if err2 != nil {
+			fmt.Println("Error in creating struct from json: " + err2.Error())
+			return err2
+		} else {
+			file, err3 := os.OpenFile(path+"/"+strings.ToLower(table)+".go", os.O_CREATE|os.O_WRONLY, 0644)
+			if err3 != nil {
+				fmt.Println("Open File fail: " + err.Error())
+				return err3
+			}
+			length, err3 := file.WriteString(string(struc))
+			file.Sync()
+			if err3 != nil {
+				fmt.Println("Save File fail: " + err.Error())
+				return err3
+			}
+			fmt.Printf("wrote %d bytes\n", length)
+		}
+	}
 	return nil
 }

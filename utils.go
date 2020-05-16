@@ -3,10 +3,10 @@ package db2struct
 import (
 	"fmt"
 	"go/format"
+	"log"
 	"strconv"
 	"strings"
 	"unicode"
-	"log"
 )
 
 // Constants for return types of golang
@@ -82,12 +82,12 @@ var Debug = false
 
 // Generate Given a Column map with datatypes and a name structName,
 // attempts to generate a struct definition
-func Generate(columnTypes map[string]map[string]string, tableName string, structName string, pkgName string, jsonAnnotation bool, gormAnnotation bool, gureguTypes bool) ([]byte, error) {
+func Generate(columnTypes map[string]map[string]string, tableName string, structName string, pkgName string, jsonAnnotation bool, gormAnnotation bool, gureguTypes bool, sqlxAnnotation bool) ([]byte, error) {
 	var dbTypes string
-	dbTypes = generateMysqlTypes(columnTypes, 0, jsonAnnotation, gormAnnotation, gureguTypes)
+	dbTypes = generateMysqlTypes(columnTypes, 0, jsonAnnotation, gormAnnotation, gureguTypes, sqlxAnnotation)
 	src := fmt.Sprintf("package %s\ntype %s %s}",
 		pkgName,
-		structName,
+		fmtStructName(tableName),
 		dbTypes)
 	if gormAnnotation == true {
 		tableNameFunc := "// TableName sets the insert table name for this struct type\n" +
@@ -101,6 +101,16 @@ func Generate(columnTypes map[string]map[string]string, tableName string, struct
 		err = fmt.Errorf("error formatting: %s, was formatting\n%s", err, src)
 	}
 	return formatted, err
+}
+
+func fmtStructName(name string) string {
+	ns := strings.Split(name, "_")
+	for i, n := range ns {
+		ns[i] = strings.Title(n)
+	}
+	result := strings.Join(ns, "")
+	fmt.Printf("generating struct %s for table %s\n", result, name)
+	return result
 }
 
 // fmtFieldName formats a string as a struct key

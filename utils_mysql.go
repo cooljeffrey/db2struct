@@ -30,7 +30,7 @@ func GetColumnsFromMysqlTable(mariadbUser string, mariadbPassword string, mariad
 	// Store colum as map of maps
 	columnDataTypes := make(map[string]map[string]string)
 	// Select columnd data from INFORMATION_SCHEMA
-	columnDataTypeQuery := "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND table_name = ?"
+	columnDataTypeQuery := "SELECT COLUMN_NAME, COLUMN_KEY, DATA_TYPE, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND table_name = ?"
 
 	if Debug {
 		fmt.Println("running: " + columnDataTypeQuery)
@@ -50,18 +50,19 @@ func GetColumnsFromMysqlTable(mariadbUser string, mariadbPassword string, mariad
 
 	for rows.Next() {
 		var column string
+		var columnKey string
 		var dataType string
 		var nullable string
-		rows.Scan(&column, &dataType, &nullable)
+		rows.Scan(&column, &columnKey, &dataType, &nullable)
 
-		columnDataTypes[column] = map[string]string{"value": dataType, "nullable": nullable}
+		columnDataTypes[column] = map[string]string{"value": dataType, "nullable": nullable, "primary": columnKey}
 	}
 
 	return &columnDataTypes, err
 }
 
 // Generate go struct entries for a map[string]interface{} structure
-func generateMysqlTypes(obj map[string]map[string]string, depth int, jsonAnnotation bool, gormAnnotation bool, gureguTypes bool) string {
+func generateMysqlTypes(obj map[string]map[string]string, depth int, jsonAnnotation bool, gormAnnotation bool, gureguTypes bool, sqlxAnnotation bool) string {
 	structure := "struct {"
 
 	keys := make([]string, 0, len(obj))
@@ -77,6 +78,11 @@ func generateMysqlTypes(obj map[string]map[string]string, depth int, jsonAnnotat
 			nullable = true
 		}
 
+		primary := ""
+		if mysqlType["primary"] == "PRI" {
+			primary = ";primary_key"
+		}
+
 		// Get the corresponding go value type for this mysql type
 		var valueType string
 		// If the guregu (https://github.com/guregu/null) CLI option is passed use its types, otherwise use go's sql.NullX
@@ -86,10 +92,13 @@ func generateMysqlTypes(obj map[string]map[string]string, depth int, jsonAnnotat
 		fieldName := fmtFieldName(stringifyFirstChar(key))
 		var annotations []string
 		if gormAnnotation == true {
-			annotations = append(annotations, fmt.Sprintf("db:\"%s\"", key))
+			annotations = append(annotations, fmt.Sprintf("gorm:\"column:%s%s\"", key, primary))
 		}
 		if jsonAnnotation == true {
 			annotations = append(annotations, fmt.Sprintf("json:\"%s\"", key))
+		}
+		if sqlxAnnotation == true {
+			annotations = append(annotations, fmt.Sprintf("db:\"%s\"", key))
 		}
 		if len(annotations) > 0 {
 			structure += fmt.Sprintf("\n%s %s `%s`",
@@ -125,7 +134,7 @@ func mysqlTypeToGoType(mysqlType string, nullable bool, gureguTypes bool) string
 			return sqlNullInt
 		}
 		return golangInt64
-	case "char", "enum", "varchar", "longtext", "mediumtext", "text", "tinytext":
+	case "char", "enum", "varchar", "longtext", "mediumtext", "text", "tinytext", "json":
 		if nullable {
 			if gureguTypes {
 				return gureguNullString
@@ -158,4 +167,45 @@ func mysqlTypeToGoType(mysqlType string, nullable bool, gureguTypes bool) string
 		return golangByteArray
 	}
 	return ""
+}
+
+func ListTablesOfDatabase(mariadbUser string, mariadbPassword string, mariadbHost string, mariadbPort int, mariadbDatabase string) ([]string, error) {
+
+	var err error
+	var db *sql.DB
+	if mariadbPassword != "" {
+		db, err = sql.Open("mysql", mariadbUser+":"+mariadbPassword+"@tcp("+mariadbHost+":"+strconv.Itoa(mariadbPort)+")/"+mariadbDatabase+"?&parseTime=True")
+	} else {
+		db, err = sql.Open("mysql", mariadbUser+"@tcp("+mariadbHost+":"+strconv.Itoa(mariadbPort)+")/"+mariadbDatabase+"?&parseTime=True")
+	}
+	defer db.Close()
+
+	// Check for error in db, note this does not check connectivity but does check uri
+	if err != nil {
+		fmt.Println("Error opening mysql db: " + err.Error())
+		return nil, err
+	}
+
+	query := "select TABLE_NAME from information_schema.TABLES WHERE TABLE_SCHEMA = ?"
+
+	rows, err := db.Query(query, mariadbDatabase)
+
+	if err != nil {
+		fmt.Println("Error show tables from db: " + err.Error())
+		return nil, err
+	}
+	if rows != nil {
+		defer rows.Close()
+	} else {
+		return nil, errors.New("No results returned for tables")
+	}
+
+	result := make([]string, 0)
+	for rows.Next() {
+		var tableName string
+		rows.Scan(&tableName)
+		result = append(result, tableName)
+	}
+
+	return result, err
 }
